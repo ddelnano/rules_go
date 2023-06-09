@@ -393,15 +393,21 @@ def _set_ternary(settings, attr, name):
     return value
 
 _SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
+_SDK_GOEXPERIMENT_BUILD_SETTING = "//go/toolchain:goexperiments"
 TRANSITIONED_GO_CROSS_SETTING_KEYS = [
     _SDK_VERSION_BUILD_SETTING,
+    _SDK_GOEXPERIMENT_BUILD_SETTING,
     "//command_line_option:platforms",
 ]
 
 def _go_cross_transition_impl(settings, attr):
     settings = dict(settings)
+    print(settings)
     if attr.sdk_version != None:
         settings[_SDK_VERSION_BUILD_SETTING] = attr.sdk_version
+
+    if attr.experiments != None and len(attr.experiments) > 0:
+        settings[_SDK_GOEXPERIMENT_BUILD_SETTING] = attr.experiments
 
     if attr.platform != None:
         settings["//command_line_option:platforms"] = str(attr.platform)

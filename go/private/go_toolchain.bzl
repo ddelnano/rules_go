@@ -125,10 +125,17 @@ def declare_bazel_toolchains(
         patch,
         prerelease,
         sdk_type,
+        experiments,
         prefix = ""):
     """Declares toolchain targets for each platform."""
 
     sdk_version_label = Label("//go/toolchain:sdk_version")
+    goexperiments_label = Label("//go/toolchain:goexperiments")
+    print(experiments)
+    print(goexperiments_label)
+
+    # TODO(ddelnano): Add config setting for match_all_experiments
+    # TODO(ddelnano): Add config setting for matching a particular experiment(s) with ordering not
 
     native.config_setting(
         name = prefix + "match_all_versions",

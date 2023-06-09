@@ -60,20 +60,28 @@ func F() {}
 	})
 }
 
-const origWrapSDK = `go_wrap_sdk(
+const origWrapSDK = `
+go_wrap_sdk(
     name = "go_sdk",
     root_file = "@local_go_sdk//:ROOT",
-)`
+)
+`
 
-const wrapSDKBoringcrypto = `go_wrap_sdk(
+const wrapSDKBoringcrypto = `
+go_wrap_sdk(
     name = "go_sdk",
     root_file = "@local_go_sdk//:ROOT",
     experiments = ["boringcrypto"],
-)`
+)
+`
 
 func TestBoringcryptoExperimentPresent(t *testing.T) {
 	mustReplaceInFile(t, "WORKSPACE", origWrapSDK, wrapSDKBoringcrypto)
 	defer mustReplaceInFile(t, "WORKSPACE", wrapSDKBoringcrypto, origWrapSDK)
+	// Uncommenting this produces the linking error that I believe is related to the
+	// wrong toolchain (no boringcrypto one) being selected.
+	// mustReplaceInFile(t, "WORKSPACE", origWrapSDK, wrapSDKBoringcrypto+origWrapSDK)
+	// defer mustReplaceInFile(t, "WORKSPACE", wrapSDKBoringcrypto+origWrapSDK, origWrapSDK)
 
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go command is necessary to evaluate if boringcrypto experiment is present")
