@@ -121,6 +121,10 @@ _go_cross_kwargs = {
             build flag to the value provided for `sdk_version` here.
             """,
         ),
+        "experiments": attr.string_list(
+            mandatory = False,
+            doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),

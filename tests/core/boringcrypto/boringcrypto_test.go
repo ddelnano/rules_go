@@ -16,6 +16,7 @@ package boringcrypto_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -68,7 +69,7 @@ const origWrapSDK = `go_wrap_sdk(
 const wrapSDKBoringcrypto = `go_wrap_sdk(
     name = "go_sdk",
     root_file = "@local_go_sdk//:ROOT",
-    experiments = ["boringcrypto"],
+    experiments = ["boringcrypto", "nocoverageredesign"],
 )`
 
 func TestBoringcryptoExperimentPresent(t *testing.T) {
@@ -79,7 +80,8 @@ func TestBoringcryptoExperimentPresent(t *testing.T) {
 		t.Skip("go command is necessary to evaluate if boringcrypto experiment is present")
 	}
 
-	cmd := bazel_testing.BazelCmd("build", "//:program")
+	// cmd := bazel_testing.BazelCmd("build", "//:program")
+	cmd := bazel_testing.BazelCmd("build", "//:program", "--toolchain_resolution_debug=@io_bazel_rules_go//go:toolchain")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stdout
 	if err := cmd.Run(); err != nil {
@@ -102,6 +104,7 @@ func mustReplaceInFile(t *testing.T, path, old, new string) {
 		return
 	}
 	data, err := os.ReadFile(path)
+	fmt.Println(string(data))
 	if err != nil {
 		t.Fatal(err)
 	}

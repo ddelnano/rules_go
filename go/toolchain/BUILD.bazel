@@ -1,5 +1,5 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag", "string_list_flag")
 load(
     ":toolchains.bzl",
     "declare_constraints",
@@ -12,6 +12,12 @@ declare_constraints()
 string_flag(
     name = "sdk_version",
     build_setting_default = "",
+)
+
+string_list_flag(
+    name = "goexperiments",
+    build_setting_default = [],
+    visibility = ["//visibility:public"],
 )
 
 filegroup(

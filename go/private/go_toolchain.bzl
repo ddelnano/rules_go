@@ -103,6 +103,8 @@ def declare_go_toolchains(host_goos, sdk, builder):
         if host_goos == "linux":
             cgo_link_flags.append("-Wl,-whole-archive")
 
+        # TODO(ddelnano): I'm unable to get the toolchain to match when experiments are specified
+        # it feels like they might need to be registered here since --toolchain_resolution_debug='//go:toolchain' is printing out these toolchains.
         go_toolchain(
             name = "go_" + p.name + "-impl",
             goos = p.goos,
@@ -125,10 +127,23 @@ def declare_bazel_toolchains(
         patch,
         prerelease,
         sdk_type,
+        experiments,
         prefix = ""):
     """Declares toolchain targets for each platform."""
 
     sdk_version_label = Label("//go/toolchain:sdk_version")
+    goexperiments_label = Label("//go/toolchain:goexperiments")
+    print(experiments)
+    print(goexperiments_label)
+
+    for experiment in experiments:
+      native.config_setting(
+        name = prefix + "goexperiment_" + experiment,
+        flag_values = {
+            goexperiments_label: experiment,
+        },
+        visibility = ["//visibility:private"],
+      )
 
     native.config_setting(
         name = prefix + "match_all_versions",
@@ -179,6 +194,19 @@ def declare_bazel_toolchains(
         visibility = ["//visibility:private"],
     )
 
+
+    match = []
+    if len(experiments) > 0:
+        for experiment in experiments:
+            match = match + [":" + prefix + "goexperiment_" + experiment]
+        print(match)
+        selects.config_setting_group(
+            name = prefix + "goexperiments",
+            match_all = match,
+            visibility = ["//visibility:private"],
+        )
+    print(match)
+
     selects.config_setting_group(
         name = prefix + "sdk_version_setting",
         match_any = [
@@ -205,15 +233,19 @@ def declare_bazel_toolchains(
         )
         constraints = [c for c in p.constraints if c not in cgo_constraints]
 
+        target_settings = [":" + prefix + "sdk_version_setting"]
+        if len(experiments) > 0:
+            target_settings += [":" + prefix + "goexperiments"]
+
         native.toolchain(
             # keep in sync with generate_toolchain_names
-            name = prefix + "go_" + p.name,
+            name = prefix + "go_" + p.name + "_".join(experiments),
             toolchain_type = GO_TOOLCHAIN,
             exec_compatible_with = [
                 "@io_bazel_rules_go//go/toolchain:" + host_goos,
                 "@io_bazel_rules_go//go/toolchain:" + host_goarch,
             ],
             target_compatible_with = constraints,
-            target_settings = [":" + prefix + "sdk_version_setting"],
+            target_settings = target_settings,
             toolchain = go_toolchain_repo + "//:go_" + p.name + "-impl",
         )

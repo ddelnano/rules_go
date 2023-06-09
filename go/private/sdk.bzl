@@ -50,6 +50,7 @@ go_host_sdk_rule = repository_rule(
 
 def go_host_sdk(name, register_toolchains = True, **kwargs):
     go_host_sdk_rule(name = name, **kwargs)
+    print("go_host_sdk kwargs: ", kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -57,6 +58,7 @@ def go_host_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        experiments = kwargs.get("experiments"),
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -175,7 +177,7 @@ def _to_constant_name(s):
     # Prefix with _ as identifiers are not allowed to start with numbers.
     return "_" + "".join([c if c.isalnum() else "_" for c in s.elems()]).upper()
 
-def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_type, sdk_version):
+def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_type, sdk_version, experiments):
     if not goos and not goarch:
         goos, goarch = detect_host_platform(ctx)
     else:
@@ -207,6 +209,7 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
             identifier_prefix = identifier_prefix,
         ))
 
+    print(experiments)
     chunks.append("""declare_bazel_toolchains(
     prefix = "{prefix}",
     go_toolchain_repo = "@{sdk_repo}",
@@ -217,6 +220,7 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
     patch = {identifier_prefix}PATCH_VERSION,
     prerelease = {identifier_prefix}PRERELEASE_SUFFIX,
     sdk_type = "{sdk_type}",
+    experiments = {experiments},
 )
 """.format(
         prefix = prefix,
@@ -225,6 +229,7 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
         goarch = goarch,
         goos = goos,
         sdk_type = sdk_type,
+        experiments = repr(experiments),
     ))
 
     return struct(
@@ -239,7 +244,10 @@ def go_toolchains_build_file_content(
         goarchs,
         sdk_repos,
         sdk_types,
-        sdk_versions):
+        sdk_versions,
+        experiments):
+    print(len(prefixes), len(experiments))
+    # if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions, experiments):
     if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions):
         fail("all lists must have the same length")
 
@@ -250,6 +258,8 @@ def go_toolchains_build_file_content(
         """package(default_visibility = ["//visibility:public"])""",
     ]
 
+    print(experiments)
+    print(geese)
     for i in range(len(geese)):
         definition = go_toolchains_single_definition(
             ctx,
@@ -259,6 +269,7 @@ def go_toolchains_build_file_content(
             sdk_repo = sdk_repos[i],
             sdk_type = sdk_types[i],
             sdk_version = sdk_versions[i],
+            experiments = experiments,
         )
         loads.extend(definition.loads)
         chunks.extend(definition.chunks)
@@ -266,6 +277,7 @@ def go_toolchains_build_file_content(
     return "\n".join(loads + chunks)
 
 def _go_multiple_toolchains_impl(ctx):
+    print("multiple toolchain impl ", repr(ctx.attr.experiments))
     ctx.file(
         "BUILD.bazel",
         go_toolchains_build_file_content(
@@ -276,6 +288,7 @@ def _go_multiple_toolchains_impl(ctx):
             sdk_repos = ctx.attr.sdk_repos,
             sdk_types = ctx.attr.sdk_types,
             sdk_versions = ctx.attr.sdk_versions,
+            experiments = ctx.attr.experiments,
         ),
         executable = False,
     )
@@ -289,10 +302,17 @@ go_multiple_toolchains = repository_rule(
         "sdk_versions": attr.string_list(mandatory = True),
         "geese": attr.string_list(mandatory = True),
         "goarchs": attr.string_list(mandatory = True),
+        "experiments": attr.string_list(),
     },
 )
 
-def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None):
+def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None, experiments = None):
+    print("_go_toolchains experiments ", experiments)
+    experiments = experiments if experiments != None else []
+    # TODO(ddelnano): Seems like this needs to be handled, but I'm not sure exactly how to.
+    # The experiements attribute is a string and afaict you can't have a list of string list
+    # data type (as described in https://github.com/bazelbuild/bazel/issues/12178). Maybe the
+    # solution is to sort and concatenate them together to allow this to be a native data type (string list)
     go_multiple_toolchains(
         name = name,
         prefixes = [""],
@@ -301,10 +321,12 @@ def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, go
         sdk_repos = [sdk_repo],
         sdk_types = [sdk_type],
         sdk_versions = [sdk_version or ""],
+        experiments = experiments,
     )
 
 def go_download_sdk(name, register_toolchains = True, **kwargs):
     go_download_sdk_rule(name = name, **kwargs)
+    print("go_download_sdk kwargs: ", kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -312,6 +334,7 @@ def go_download_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        experiments = kwargs.get("experiments"),
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -339,6 +362,7 @@ _go_local_sdk = repository_rule(
 
 def go_local_sdk(name, register_toolchains = True, **kwargs):
     _go_local_sdk(name = name, **kwargs)
+    print("go_local_sdk kwargs: ", kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -346,6 +370,7 @@ def go_local_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        experiments = kwargs.get("goexperiments"),
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -366,6 +391,7 @@ def _go_wrap_sdk_impl(ctx):
     goroot = str(ctx.path(root_file).dirname)
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
+    print(ctx.attr.experiments)
     _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
     _local_sdk(ctx, goroot)
 
@@ -392,6 +418,7 @@ _go_wrap_sdk = repository_rule(
 
 def go_wrap_sdk(name, register_toolchains = True, **kwargs):
     _go_wrap_sdk(name = name, **kwargs)
+    print("go_wrap_sdk kwargs: ", kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -399,6 +426,7 @@ def go_wrap_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        experiments = kwargs.get("experiments"),
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -478,6 +506,8 @@ def _sdk_build_file(ctx, platform, version, experiments):
         if not "nocoverageredesign" in experiments and not "coverageredesign" in experiments:
             experiments = experiments + ["nocoverageredesign"]
 
+    print(experiments)
+    print(repr(experiments))
     ctx.template(
         "BUILD.bazel",
         ctx.path(ctx.attr._sdk_build_file),
@@ -665,8 +695,13 @@ def _have_same_length(*lists):
         fail("expected at least one list")
     return len({len(l): None for l in lists}) == 1
 
-def go_register_toolchains(version = None, nogo = None, go_version = None, experiments = None):
+# TODO(ddelnano): The experiment_list default value was to work around an issue I was having
+# where the "outside" test runner bazel was failing to instantiate its rules_go (failed to find its
+# toolchain due to the experiment constraint). I am fairly confident we may need to specify these
+# experiements upfront like I've done here but please let me know if this is work that isn't needed
+def go_register_toolchains(version = None, nogo = None, go_version = None, experiment_list = [["boringcrypto", "nocoverageredesign"], []]):
     """See /go/toolchains.rst#go-register-toolchains for full documentation."""
+    print("go_register_toolchains experiments: ", experiment_list)
     if not version:
         version = go_version  # old name
 
@@ -675,7 +710,8 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
     sdk_rules = [r for r in existing_rules.values() if r["kind"] in sdk_kinds]
     if len(sdk_rules) == 0 and "go_sdk" in existing_rules:
         # may be local_repository in bazel_tests.
-        sdk_rules.append(existing_rules["go_sdk"])
+        for experiments in experiment_list:
+            sdk_rules.append(existing_rules["go_sdk"])
 
     if version and len(sdk_rules) > 0:
         fail("go_register_toolchains: version set after go sdk rule declared ({})".format(", ".join([r["name"] for r in sdk_rules])))
@@ -683,18 +719,20 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
         if not version:
             fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
         elif version == "host":
-            go_host_sdk(name = "go_sdk", experiments = experiments)
+            for experiments in experiment_list:
+                go_host_sdk(name = "go_sdk", experiments = experiments)
         else:
             pv = parse_version(version)
             if not pv:
                 fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
             if _version_less(pv, MIN_SUPPORTED_VERSION):
                 print("DEPRECATED: Go versions before {} are not supported and may not work".format(_version_string(MIN_SUPPORTED_VERSION)))
-            go_download_sdk(
-                name = "go_sdk",
-                version = version,
-                experiments = experiments,
-            )
+            for experiments in experiment_list:
+                go_download_sdk(
+                    name = "go_sdk",
+                    version = version,
+                    experiments = experiments,
+                )
 
     if nogo:
         # Override default definition in go_rules_dependencies().

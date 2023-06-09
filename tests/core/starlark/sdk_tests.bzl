@@ -12,6 +12,7 @@ def _go_toolchains_single_definition_with_version_test(ctx):
         sdk_repo = "sdk_repo",
         sdk_type = "download",
         sdk_version = "1.20.2rc1",
+        experiments = [],
     )
     asserts.equals(env, [], result.loads)
     asserts.equals(env, [
@@ -50,6 +51,7 @@ def _go_toolchains_single_definition_without_version_test(ctx):
         sdk_repo = "sdk_repo",
         sdk_type = "download",
         sdk_version = None,
+        experiments = [],
     )
     asserts.equals(env, ["""load(
     "@sdk_repo//:version.bzl",

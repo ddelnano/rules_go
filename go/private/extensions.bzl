@@ -132,6 +132,7 @@ def _go_sdk_impl(ctx):
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
         fail("more than {} go_sdk tags are not supported".format(_MAX_NUM_TOOLCHAINS))
 
+    print(toolchains.experiments)
     # Toolchains in a BUILD file are registered in the order given by name, not in the order they
     # are declared:
     # https://cs.opensource.google/bazel/bazel/+/master:src/main/java/com/google/devtools/build/lib/packages/Package.java;drc=8e41dce65b97a3d466d6b1e65005abc52a07b90b;l=156
