@@ -137,6 +137,15 @@ def declare_bazel_toolchains(
     # TODO(ddelnano): Add config setting for match_all_experiments
     # TODO(ddelnano): Add config setting for matching a particular experiment(s) with ordering not
 
+    for experiment in experiments:
+      native.config_setting(
+        name = prefix + "goexperiment_" + experiment,
+        flag_values = {
+            goexperiments_label: experiment,
+        },
+        visibility = ["//visibility:private"],
+      )
+
     native.config_setting(
         name = prefix + "match_all_versions",
         flag_values = {
@@ -186,6 +195,16 @@ def declare_bazel_toolchains(
         visibility = ["//visibility:private"],
     )
 
+
+    match = [":" + prefix + "goexperiment_" + experiment for experiment in experiments]
+    print(match)
+    if len(experiments) > 0:
+        selects.config_setting_group(
+            name = prefix + "goexexperiments",
+            match_all = match,
+            visibility = ["//visibility:private"],
+        )
+
     selects.config_setting_group(
         name = prefix + "sdk_version_setting",
         match_any = [
@@ -212,6 +231,10 @@ def declare_bazel_toolchains(
         )
         constraints = [c for c in p.constraints if c not in cgo_constraints]
 
+        target_settings = [":" + prefix + "sdk_version_setting"]
+        if len(experiments) > 0:
+            target_settings += [":" + prefix + "goexexperiments"]
+
         native.toolchain(
             # keep in sync with generate_toolchain_names
             name = prefix + "go_" + p.name,
@@ -221,6 +244,6 @@ def declare_bazel_toolchains(
                 "@io_bazel_rules_go//go/toolchain:" + host_goarch,
             ],
             target_compatible_with = constraints,
-            target_settings = [":" + prefix + "sdk_version_setting"],
+            target_settings = target_settings,
             toolchain = go_toolchain_repo + "//:go_" + p.name + "-impl",
         )

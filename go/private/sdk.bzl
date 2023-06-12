@@ -248,7 +248,8 @@ def go_toolchains_build_file_content(
         sdk_versions,
         experiments):
     print(len(prefixes), len(experiments))
-    if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions, experiments):
+    # if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions, experiments):
+    if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions):
         fail("all lists must have the same length")
 
     loads = [
@@ -317,7 +318,7 @@ def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, go
         sdk_repos = [sdk_repo],
         sdk_types = [sdk_type],
         sdk_versions = [sdk_version or ""],
-        experiments = [experiments or ""],
+        experiments = experiments,
     )
 
 def go_download_sdk(name, register_toolchains = True, **kwargs):
